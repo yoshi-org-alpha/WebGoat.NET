@@ -7,6 +7,7 @@ using System.Web.UI.WebControls;
 using System.Data;
 using System.IO;
 using System.Collections.Specialized;
+using MySql.Data.MySqlClient;
 using OWASP.WebGoat.NET.App_Code.DB;
 using OWASP.WebGoat.NET.App_Code;
 
@@ -17,8 +18,40 @@ namespace OWASP.WebGoat.NET.WebGoatCoins
     
         private IDbProvider du = Settings.CurrentDbProvider;
         
+        // CodeQL: cs/sql-injection (Critical) - query string value concatenated into MySqlCommand text
+        private void SearchOrdersByStatus(string status)
+        {
+            ConfigFile config = Settings.CurrentConfigFile;
+            string connectionString = string.Format("SERVER={0};PORT={1};DATABASE={2};UID={3};PWD={4}",
+                                                    config.Get(DbConstants.KEY_HOST),
+                                                    config.Get(DbConstants.KEY_PORT),
+                                                    config.Get(DbConstants.KEY_DATABASE),
+                                                    config.Get(DbConstants.KEY_UID),
+                                                    config.Get(DbConstants.KEY_PWD));
+
+            string sql = "SELECT orderNumber, status, orderDate FROM orders WHERE status = '" + status + "'";
+
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                MySqlCommand command = new MySqlCommand(sql, connection);
+                MySqlDataAdapter adapter = new MySqlDataAdapter(command);
+                DataSet filtered = new DataSet();
+                adapter.Fill(filtered);
+
+                if (filtered.Tables.Count > 0)
+                {
+                    DetailsView1.DataSource = filtered.Tables[0];
+                    DetailsView1.DataBind();
+                }
+            }
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            string statusFilter = Request.QueryString["statusFilter"];
+            if (!string.IsNullOrEmpty(statusFilter))
+                SearchOrdersByStatus(statusFilter);
+
             int id;
             DataSet ds;
             if (Request.Cookies["customerNumber"] == null || !int.TryParse(Request.Cookies["customerNumber"].Value.ToString(), out id))

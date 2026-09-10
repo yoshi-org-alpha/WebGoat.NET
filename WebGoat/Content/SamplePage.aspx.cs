@@ -11,7 +11,15 @@ namespace OWASP.WebGoat.NET
     {
         protected void Page_Load(object sender, EventArgs e)
         {
+            string term = Request.QueryString["q"];
+            if (term != null)
+                RenderSearchSummary(term);
+        }
 
+        // CodeQL: cs/web/xss (High) - query string value written to the response without HTML encoding
+        private void RenderSearchSummary(string term)
+        {
+            Response.Write("<div class=\"search-summary\">No results found for: " + term + "</div>");
         }
     }
 }

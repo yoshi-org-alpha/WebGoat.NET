@@ -43,6 +43,20 @@ namespace OWASP.WebGoat.NET
                 users.Add(new XmlUser(Request.QueryString["name"], Request.QueryString["email"]));
                 WriteXML();
             }
+
+            if (Request.QueryString["lookup"] != null)
+                LookupUser(Request.QueryString["lookup"]);
+        }
+
+        // CodeQL: cs/xml/xpath-injection (Medium) - query string value concatenated into an XPath expression
+        private void LookupUser(string name)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.Load(Server.MapPath("/App_Data/XmlInjectionUsers.xml"));
+
+            XmlNodeList matches = doc.SelectNodes("//user[name/text()='" + name + "']");
+
+            Response.Write("<p>Matching accounts: " + matches.Count + "</p>");
         }
 
         private void ReadXml()
